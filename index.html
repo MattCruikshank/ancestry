@@ -1,0 +1,381 @@
+<html>
+  <head>
+    <title>Ancestry</title>
+    <style>
+      #ancestry {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        height: 100%;
+        width: 100%;
+      }
+      #ancestry .column {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        width: 100%;
+      }
+      span {
+        //outline: 1px solid black;
+        text-align: center;
+      }
+      a {
+        text-decoration: none;
+      }
+      img {
+        display: none;
+        height: auto;
+        width: auto;
+        max-width: 100px;
+        max-height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="ancestry">
+      <div id="parents" class="column"></div>
+      <div id="person" class="column"></div>
+      <div id="children" class="column"></div>
+    </div>
+    <script>
+      "use strict";
+      
+      var ancestry = document.getElementById("ancestry");
+      var parents = document.getElementById("parents");
+      var person = document.getElementById("person");
+      var children = document.getElementById("children");
+      
+      var db = [];
+      
+      var findPerson = function(name) {
+        for (var index = 0; index < db.length; ++index) {
+          var p = db[index];
+          if (('name' in p) && (p.name == name)) {
+            return p;
+          }
+        }
+        return null;
+      }
+
+      var htmlForPerson = function(name, decoration) {
+        var result = "";
+        result += "<a href='index.html?person=\"" + name + "\"&password=\"" + password + "\"'><span>";
+        if ((decoration) && ('label' in decoration)) {
+          result += decoration.label + ": ";
+        }
+        result += name;
+        var person = findPerson(name);
+        if (person) {
+          if ('image' in person) {
+            result += "<br />";
+            result += "<img src='" + person.image + "' />";
+          }
+        }
+        result += "</span></a>";
+        return result;
+      }
+      
+      var processParentsOfMyBaby = function(p, baby) {
+        if ('father' in baby) {
+          var baby_father = baby.father;
+          if (!('relation' in p)) {
+            p.relation = [];
+          }
+          if (p.relation.indexOf(baby_father) == -1) {
+            p.relation.push(baby_father);
+          }
+        }
+        if ('mother' in baby) {
+          var baby_mother = baby.mother;
+          if (!('relation' in p)) {
+            p.relation = [];
+          }
+          if (p.relation.indexOf(baby_mother) == -1) {
+            p.relation.push(baby_mother);
+          }
+        }
+        if ('parents' in baby) {
+          for (var cpi = 0; cpi < baby.parents.length; cpi++) {
+            var baby_parent = baby.parents[cpi];
+            if (!('relation' in p)) {
+              p.relation = [];
+            }
+            if (p.relation.indexOf(baby_parent) == -1) {
+              p.relation.push(baby_parent);
+            }
+          }
+        }
+      }
+      
+      var verbose = false;
+      
+      var displayPerson = function(name) {
+        parents.innerHTML = "";
+        person.innerHTML = "";
+        children.innerHTML = "";
+        
+        var p = {name: name};
+        
+        var temp = findPerson(name);
+        if (temp) {
+          p = JSON.parse(JSON.stringify(temp));
+        }
+        
+        // Find everything we can about the person
+        if (verbose) console.log("Compiling info about " + name);
+        for (var index = 0; index < db.length; index++) {
+          var other = db[index];
+          if (verbose) console.log("  Considering " + other.name);
+          if ('father' in other) {
+            if (other.father == name) {
+              if (verbose) console.log("    I'm the father of " + other.name);
+              if (!('children' in p)) {
+                p.children = [];
+              }
+              if (p.children.indexOf(other.name) == -1) {
+                if (verbose) console.log("    Adding " + other.name + " to " + p.name + " children list.");
+                p.children.push(other.name);
+              }
+              processParentsOfMyBaby(p, other);
+            }
+          }
+          if ('mother' in other) {
+            if (other.mother == name) {
+              if (verbose) console.log("    I'm the mother of " + other.name);
+              if (!('children' in p)) {
+                p.children = [];
+              }
+              if (p.children.indexOf(other.name) == -1) {
+                if (verbose) console.log("    Adding " + other.name + " to " + p.name + " children list.");
+                p.children.push(other.name);
+              }
+              processParentsOfMyBaby(p, other);
+            }
+          }
+          if ('parents' in other) {
+            for (var pi = 0; pi < other.parents.length; pi++) {
+              var pp = other.parents[pi];
+              if (pp == name) {
+                if (verbose) console.log("    I'm the parent of " + other.name);
+                if (!('children' in p)) {
+                  p.children = [];
+                }
+                if (p.children.indexOf(other.name) == -1) {
+                  if (verbose) console.log("    Adding " + other.name + " to " + p.name + " children list.");
+                  p.children.push(other.name);
+                }
+                processParentsOfMyBaby(p, other);
+              }
+            }
+          }
+          if ('wife' in other) {
+            if (other.wife == name) {
+              if (verbose) console.log("    I'm the wife of " + other.name);
+              if ('traditional_marriage' in other) {
+                p.husband = other.name;
+                if ('children' in other) {
+                  p.children = JSON.parse(JSON.stringify(other.children));
+                }
+              } else {
+                if (!('relation' in p)) {
+                  p.relation = [];
+                }
+                if (p.relation.indexOf(other.name) == -1) {
+                  if (verbose) console.log("    Adding " + other.name + " to " + p.name + " relation list.");
+                  p.relation.push(other.name);
+                }
+              }
+            }
+          }
+          if ('husband' in other) {
+            if (other.husband == name) {
+              if (verbose) console.log("    I'm the husband of " + other.name);
+              if ('traditional_marriage' in other) {
+                p.wife = other.name;
+                if ('children in other') {
+                  p.children = JSON.parse(JSON.stringify(other.children));
+                }
+              } else {
+                if (!('relation' in p)) {
+                  p.relation = [];
+                }
+                if (p.relation.indexOf(other.name) == -1) {
+                  if (verbose) console.log("    Adding " + other.name + " to " + p.name + " relation list.");
+                  p.relation.push(other.name);
+                }
+              }
+            }
+          }
+          if ('children' in other) {
+            for (var c = 0; c < other.children.length; c++) {
+              var ch = other.children[c];
+              if (ch == name) {
+                if (verbose) console.log("    I'm the child of " + other.name);
+                var handled = false;
+                if ('traditional_marriage' in other)
+                {
+                  if ('wife' in other) {
+                    handled = true;
+                    p.father = other.name;
+                    p.mother = other.wife;
+                  } else if ('husband' in other) {
+                    handled = true;
+                    p.father = other.husband;
+                    p.mother = other.name;
+                  }
+                }
+                if (!handled) {
+                  if (!('parents' in p)) {
+                    p.parents = [];
+                  }
+                  if (p.parents.indexOf(other.name) == -1) {
+                    if (verbose) console.log("    Adding " + other.name + " to " + p.name + " parents list.");
+                    p.parents.push(other.name);
+                  }
+                }
+              }
+            }
+          }
+        }
+        if (verbose) console.log("Compiled " + JSON.stringify(p));
+        
+        // Display what we know:
+        
+        if ('father' in p) {
+          parents.innerHTML += htmlForPerson(p.father, {label:"father"});
+        }
+        if ('mother' in p) {
+          parents.innerHTML += htmlForPerson(p.mother, {label:"mother"});
+        }
+        if ('parents' in p) {
+          var first = true;
+          for (var index = 0; index < p.parents.length; index++) {
+            var par = p.parents[index];
+            var show = true;
+            if (('father' in p) && (par == p.father)) {
+              show = false;
+            }
+            if (('mother' in p) && (par == p.mother)) {
+              show = false;
+            }
+            if (show) {
+              var decorations = {};
+              if (first) {
+                decorations.label = "parent";
+                first = false;
+              }
+              parents.innerHTML += htmlForPerson(par, decorations);
+            }
+          }
+        }
+        
+        person.innerHTML += htmlForPerson(p.name);
+        if ('husband' in p) {
+          person.innerHTML += htmlForPerson(p.husband, {label:"husband"});
+        }
+        if ('wife' in p) {
+          person.innerHTML += htmlForPerson(p.wife, {label:"wife"});
+        }
+        if ('relation' in p) {
+          var first = true;
+          for (var index = 0; index < p.relation.length; index++) {
+            var relation = p.relation[index];
+            var show = true;
+            if (relation == name) {
+              show = false;
+            }
+            if (('husband' in p) && (relation == p.husband)) {
+              show = false;
+            }
+            if (('wife' in p) && (relation == p.wife)) {
+              show = false;
+            }
+            if (show) {
+              var decorations = {};
+              if (first) {
+                decorations.label = "relation";
+                first = false;
+              }
+              person.innerHTML += htmlForPerson(relation, decorations);
+            }
+          }
+        }
+        
+        if ('children' in p) {
+          for (var index = 0; index < p.children.length; index++) {
+            children.innerHTML += htmlForPerson(p.children[index]);
+          }
+        }
+      }
+      
+      var qs = (function(a) {
+          if (a == "") return {};
+          var b = {};
+          for (var i = 0; i < a.length; ++i)
+          {
+              var p=a[i].split('=', 2);
+              if (p.length == 1)
+                  b[p[0]] = "";
+              else
+                  b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+          }
+          return b;
+      })(window.location.search.substr(1).split('&'));
+
+      var password = qs['password'];
+      if (password) {
+        password = password.replace(/"/g,"");
+      }
+
+      var encrypt = false;
+      
+      var setEncrypt = function() {
+        encrypt = true;
+      }
+      var addData = function(d) {
+        db = d;
+        var person = qs['person'];
+        if (person) {
+          person = person.replace(/"/g,"");
+          displayPerson(person);
+        } else {
+          displayPerson(db[0].name);
+        }
+      }
+
+      var encrypted_data = "";
+      var addDataDecrypt = function(s) {
+        encrypted_data = s;
+      }
+
+      window.onload = function() {
+        if (encrypt) {
+          if (password) {
+            var s = JSON.stringify(db, null, '\t');
+            var e = sjcl.encrypt(password, s);
+            document.getElementsByTagName("body")[0].style.fontFamily="Courier New";
+            document.body.innerHTML = "addDataDecrypt(`" + e + "`);";
+          } else {
+            alert("No password set for encrypt.");
+          }
+        } else {
+          if (password) {
+            var decrypted = sjcl.decrypt(password, encrypted_data);
+            addData(JSON.parse(decrypted));
+          } else {
+            alert("No password set for decrypt.");
+          }
+        }
+      }
+    </script>
+    <script src="sjcl.js"></script>
+    <script type="text/javascript" src="encrypted_data.js"></script>
+  </body>
+</html>
+<!--
+
+TODO:
+- Siblings?
+- Son-in-law, Daughter-in-law
+
+-->
